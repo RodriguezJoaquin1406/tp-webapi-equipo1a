@@ -82,7 +82,7 @@ namespace negocio
             }
             catch (Exception ex)
             {
-
+                return lista = null;
                 throw ex;
             }
             finally
