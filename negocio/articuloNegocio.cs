@@ -10,9 +10,9 @@ namespace negocio
 {
     public class articuloNegocio
     {
-        List<Articulo> lista = new List<Articulo> ();
-        AccesoDatos datos = new AccesoDatos ();
-        
+        List<Articulo> lista = new List<Articulo>();
+        AccesoDatos datos = new AccesoDatos();
+
         public List<Articulo> listar()
         {
             string select = "SELECT A.Id, Codigo, Nombre, A.Descripcion, M.Id marcID, M.Descripcion marcDesc, C.Id catID, C.Descripcion catDesc, Precio, I.Id imgID, I.ImagenUrl imgUrl";
@@ -119,12 +119,18 @@ namespace negocio
                 }
                 datos.cerrarConexion();
                 // Inserto la imagen
-                string insertImagen = "INSERT INTO IMAGENES(IdArticulo, ImagenUrl) VALUES(@IdArticulo, @ImagenUrl)";
-                datos.setConsulta(insertImagen);
-                datos.setearParametro("@IdArticulo", idArticulo);
-                datos.setearParametro("@ImagenUrl", nuevo.imagen.ImagenUrl);
-                datos.ejecutarAccion();
-                datos.cerrarConexion();
+                if (nuevo.imagen != null)
+                {
+
+                    string insertImagen = "INSERT INTO IMAGENES(IdArticulo, ImagenUrl) VALUES(@IdArticulo, @ImagenUrl)";
+                    datos.setConsulta(insertImagen);
+                    datos.setearParametro("@IdArticulo", idArticulo);
+
+                    datos.setearParametro("@ImagenUrl", nuevo.imagen.ImagenUrl);
+
+                    datos.ejecutarAccion();
+                    datos.cerrarConexion();
+                }
             }
             catch (Exception ex)
             {
@@ -263,7 +269,7 @@ namespace negocio
             finally
             {
                 datos.cerrarConexion();
-                
+
             }
         }
 
@@ -345,7 +351,7 @@ namespace negocio
                         case "Termina con":
                             consulta += "M.Descripcion LIKE '%" + filtro + "'";
                             break;
-                        default: 
+                        default:
                             consulta += "M.Descripcion LIKE '%" + filtro + "%'";
                             break;
                     }
