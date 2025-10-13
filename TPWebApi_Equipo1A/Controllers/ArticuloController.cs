@@ -126,13 +126,29 @@ namespace TPWebApi_Equipo1A.Controllers
         {
             try
             {
-                return Request.CreateResponse(HttpStatusCode.OK, "200");
+                articulo.IdArticulo = id;
+
+                // Validación básica
+                if (string.IsNullOrWhiteSpace(articulo.CodigoArticulo) ||
+                    string.IsNullOrWhiteSpace(articulo.Nombre) ||
+                    articulo.Precio <= 0 ||
+                    articulo.marca == null || articulo.marca.IdMarca <= 0 ||
+                    articulo.categoria == null || articulo.categoria.IdCategoria <= 0)
+                {
+                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Datos inválidos.");
+                }
+
+                articuloNegocio negocio = new articuloNegocio();
+                negocio.modificar(articulo);
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Producto modificado correctamente.");
             }
             catch (Exception ex)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al modificar el producto.");
             }
         }
+
 
         // DELETE: api/Articulo/5
         public HttpResponseMessage Delete(int id)
