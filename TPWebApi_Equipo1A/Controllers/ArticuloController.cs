@@ -139,12 +139,19 @@ namespace TPWebApi_Equipo1A.Controllers
         {
             try
             {
-                return Request.CreateResponse(HttpStatusCode.OK, "200");
+                articuloNegocio negocio = new articuloNegocio();
+                Articulo art = negocio.listar().Find(x => x.IdArticulo == id);
+                if (art == null)
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Producto no encontrado.");
+
+                negocio.eliminar(art.CodigoArticulo);
+                return Request.CreateResponse(HttpStatusCode.OK, "Producto eliminado.");
             }
             catch (Exception ex)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al eliminar el producto.");
             }
         }
+
     }
 }
