@@ -206,5 +206,21 @@ namespace TPWebApi_Equipo1A.Controllers
             }
         }
 
+        [HttpPost]
+        [Route("api/Articulo/{id}/imagenes")]
+        public HttpResponseMessage AgregarImagenes(int id, [FromBody] List<string> urls)
+        {
+            try
+            {
+                articuloNegocio negocio = new articuloNegocio();
+                negocio.agregarImagenes(id, urls); // Este método lo podés implementar en tu lógica
+                return Request.CreateResponse(HttpStatusCode.OK, "Imágenes agregadas.");
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al agregar imágenes.");
+            }
+        }
+
     }
 }
