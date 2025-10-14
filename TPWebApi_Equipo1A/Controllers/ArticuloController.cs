@@ -14,22 +14,7 @@ namespace TPWebApi_Equipo1A.Controllers
     public class ArticuloController : ApiController
     {
         // GET: api/Articulo
-        //public IEnumerable<Articulo> Get()
-        //{
-        //    try
-        //    {
-        //        articuloNegocio negocio = new articuloNegocio();
-        //        List<Articulo> lista = new List<Articulo>();
 
-        //        if (lista != null) { return negocio.listar(); }
-        //        else { return null; }
-        //    }
-        //    catch (Exception ex)
-        //    {
-
-        //        return null;
-        //    }
-        //}
 
         public HttpResponseMessage Get()
         {
@@ -60,7 +45,11 @@ namespace TPWebApi_Equipo1A.Controllers
                 List<Articulo> lista = negocio.listar();
 
 
-                if (lista != null)
+                if (lista == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "404");
+                }
+                else
                 {
                     Articulo artBuscado = lista.Find(x => x.IdArticulo == id);
                     if (artBuscado != null)
@@ -72,7 +61,6 @@ namespace TPWebApi_Equipo1A.Controllers
                         return Request.CreateResponse(HttpStatusCode.NotFound, "404");
                     }
                 }
-                else { return Request.CreateResponse(HttpStatusCode.NoContent, "204"); }
             }
             catch (Exception ex)
             {
@@ -90,30 +78,45 @@ namespace TPWebApi_Equipo1A.Controllers
                 var marcasNegocio = new marcaNegocio();
                 var categoriasNegocio = new categoriaNegocio();
 
+                // Validar exitencia de marca y categoria
                 Marca marca = marcasNegocio.listar().Find(x => x.IdMarca == articulo.IdMarca);
                 Categoria categoria = categoriasNegocio.listar().Find(x => x.IdCategoria == articulo.IdCategoria);
+                // Validamos que el articulo no exista en base de datos
+                List<Articulo> articulosExistentes = articuloNegocio.listar();
+                Articulo articuloExistente = articulosExistentes.Find(x => x.CodigoArticulo == articulo.CodigoArticulo);
+                // Uso codigo articulo ya q articuloDto viene sin idarticulo no se si es correcto
 
                 if (marca == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
                 if (categoria == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
+                if (articuloExistente != null) { return Request.CreateErrorResponse(HttpStatusCode.Conflict, "409"); }
 
-                var nuevo = new Articulo
+                if (!string.IsNullOrEmpty(articulo.CodigoArticulo) && !string.IsNullOrEmpty(articulo.Nombre) && 
+                    !string.IsNullOrEmpty(articulo.Descripcion) && articulo.Precio != 0 && articulo.IdMarca != 0 
+                    && articulo.IdCategoria != 0)
                 {
-                    CodigoArticulo = articulo.CodigoArticulo,
-                    Nombre = articulo.Nombre,
-                    Descripcion = articulo.Descripcion,
-                    Precio = articulo.Precio,
-                    marca = new Marca { IdMarca = articulo.IdMarca },
-                    categoria = new Categoria { IdCategoria = articulo.IdCategoria }
-                };
-
-                articuloNegocio.agregar(nuevo);
-                List<Articulo> lista = articuloNegocio.listar();
-                Articulo artBuscado = lista.Find(x => x.CodigoArticulo == articulo.CodigoArticulo);
-                if (artBuscado == null) { return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500"); }
+                    var nuevo = new Articulo
+                    {
+                        CodigoArticulo = articulo.CodigoArticulo,
+                        Nombre = articulo.Nombre,
+                        Descripcion = articulo.Descripcion,
+                        Precio = articulo.Precio,
+                        marca = new Marca { IdMarca = articulo.IdMarca },
+                        categoria = new Categoria { IdCategoria = articulo.IdCategoria }
+                    };
+                    articuloNegocio.agregar(nuevo);
+                    List<Articulo> lista = articuloNegocio.listar();
+                    Articulo artBuscado = lista.Find(x => x.CodigoArticulo == articulo.CodigoArticulo);
+                    if (artBuscado == null) { return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500"); }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.Created, "201");
+                    }
+                }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.Created, "201");
+                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400");
                 }
+
             }
             catch (Exception ex)
             {
@@ -122,30 +125,57 @@ namespace TPWebApi_Equipo1A.Controllers
         }
 
         // PUT: api/Articulo/5
-        public HttpResponseMessage Put(int id, [FromBody] Articulo articulo)
+        public HttpResponseMessage Put(int id, [FromBody] ArticuloDto articulo)
         {
             try
             {
-                articulo.IdArticulo = id;
-
                 // Validación básica
                 if (string.IsNullOrWhiteSpace(articulo.CodigoArticulo) ||
                     string.IsNullOrWhiteSpace(articulo.Nombre) ||
                     articulo.Precio <= 0 ||
-                    articulo.marca == null || articulo.marca.IdMarca <= 0 ||
-                    articulo.categoria == null || articulo.categoria.IdCategoria <= 0)
+                    articulo.IdMarca== 0 ||
+                    articulo.IdCategoria== 0)
                 {
-                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Datos inválidos.");
+                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400");
                 }
 
                 articuloNegocio negocio = new articuloNegocio();
-                negocio.modificar(articulo);
+                Articulo nuevo = new Articulo();
+                nuevo.IdArticulo = id;
+                nuevo.CodigoArticulo = articulo.CodigoArticulo;
+                nuevo.Nombre = articulo.Nombre;
+                nuevo.Descripcion = articulo.Descripcion;
+                nuevo.Precio = articulo.Precio;
+                nuevo.marca = new Marca { IdMarca = articulo.IdMarca };
+                nuevo.categoria = new Categoria { IdCategoria = articulo.IdCategoria };
 
-                return Request.CreateResponse(HttpStatusCode.OK, "Producto modificado correctamente.");
+                negocio.modificar(nuevo);
+
+                //Validar que se hayan modificado los datos
+                Articulo validar = negocio.listar().Find(x => x.IdArticulo == id);
+                ArticuloDto articuloDto = new ArticuloDto();
+                articuloDto.CodigoArticulo = validar.CodigoArticulo;
+                articuloDto.Nombre = validar.Nombre;
+                articuloDto.Descripcion = validar.Descripcion;
+                articuloDto.Precio = validar.Precio;
+                articuloDto.IdMarca = validar.marca.IdMarca;
+                articuloDto.IdCategoria = validar.categoria.IdCategoria;
+
+                if (articuloDto.CodigoArticulo != articulo.CodigoArticulo ||
+                    articuloDto.Nombre != articulo.Nombre ||
+                    articuloDto.Descripcion != articulo.Descripcion ||
+                    articuloDto.Precio != articulo.Precio ||
+                    articuloDto.IdMarca != articulo.IdMarca ||
+                    articuloDto.IdCategoria != articulo.IdCategoria)
+                {
+                    return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
+                }
+
+                return Request.CreateResponse(HttpStatusCode.OK, "200");
             }
             catch (Exception ex)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al modificar el producto.");
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
             }
         }
 
@@ -158,14 +188,21 @@ namespace TPWebApi_Equipo1A.Controllers
                 articuloNegocio negocio = new articuloNegocio();
                 Articulo art = negocio.listar().Find(x => x.IdArticulo == id);
                 if (art == null)
-                    return Request.CreateResponse(HttpStatusCode.NotFound, "Producto no encontrado.");
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "404");
 
                 negocio.eliminar(art.CodigoArticulo);
-                return Request.CreateResponse(HttpStatusCode.OK, "Producto eliminado.");
+                // Validar que no exista mas el articulo
+                Articulo validar = negocio.listar().Find(x => x.IdArticulo == id);
+                if (validar != null)
+                {
+                    return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
+                }
+
+                return Request.CreateResponse(HttpStatusCode.OK, "200");
             }
             catch (Exception ex)
             {
-                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al eliminar el producto.");
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
             }
         }
 
