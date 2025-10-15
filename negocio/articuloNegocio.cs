@@ -454,6 +454,95 @@ namespace negocio
             }
         }
 
+        public Articulo buscarPorId(int id)
+        {
+            AccesoDatos datos = new AccesoDatos();
+            Articulo aux = null;
+
+            try
+            {
+                string consulta =
+                    "SELECT A.Id, A.Codigo, A.Nombre, A.Descripcion, M.Descripcion AS Marca, C.Descripcion AS Categoria, A.Precio " +
+                    "FROM ARTICULOS A " +
+                    "INNER JOIN MARCAS M ON A.IdMarca = M.Id " +
+                    "INNER JOIN CATEGORIAS C ON A.IdCategoria = C.Id " +
+                    "WHERE A.Id = @Id";
+
+                datos.setConsulta(consulta);
+                datos.Comando.Parameters.Clear();
+                datos.Comando.Parameters.AddWithValue("@Id", id);
+
+                datos.ejecutarLectura();
+
+                if (datos.Lector.Read())
+                {
+                    aux = new Articulo();
+                    aux.IdArticulo = (int)datos.Lector["Id"];
+                    aux.CodigoArticulo = (string)datos.Lector["Codigo"];
+                    aux.Nombre = (string)datos.Lector["Nombre"];
+                    aux.Descripcion = (string)datos.Lector["Descripcion"];
+                    aux.marca = new Marca { Descripcion = (string)datos.Lector["Marca"] };
+                    aux.categoria = new Categoria { Descripcion = (string)datos.Lector["Categoria"] };
+                    aux.Precio = (decimal)datos.Lector["Precio"];
+                }
+
+                return aux;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                datos.cerrarConexion();
+            }
+        }
+
+        public List<Imagen> traerImagenesArticulo(int id)
+        {
+            // Imagen:
+            // Int idImagen
+            // Int idArticulo
+            // String imagenUrl
+
+            AccesoDatos datos = new AccesoDatos();
+            List<Imagen> imagenes = new List<Imagen>();
+
+            try
+            {
+                string consulta = "SELECT Id, IdArticulo, ImagenUrl FROM IMAGENES WHERE IdArticulo = @Id;";
+
+                datos.setConsulta(consulta);
+                datos.Comando.Parameters.Clear();
+                datos.setearParametro("@Id", id);
+
+                datos.ejecutarLectura();
+
+                while (datos.Lector.Read())
+                {
+                    Imagen img = new Imagen
+                    {
+                        IdImagen = (int)datos.Lector["Id"],
+                        IdArticulo = (int)datos.Lector["IdArticulo"],
+                        ImagenUrl = datos.Lector["ImagenUrl"] is DBNull ? null : (string)datos.Lector["ImagenUrl"]
+                    };
+
+                    imagenes.Add(img);
+                }
+
+                return imagenes;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                datos.cerrarConexion();
+            }
+        }
+
+
     }
 
 }

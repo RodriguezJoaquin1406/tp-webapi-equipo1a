@@ -8,6 +8,7 @@ using TPWebApi_Equipo1A.Models;
 using dominio;
 using negocio;
 using Microsoft.Ajax.Utilities;
+using System.Security.Policy;
 
 namespace TPWebApi_Equipo1A.Controllers
 {
@@ -51,7 +52,7 @@ namespace TPWebApi_Equipo1A.Controllers
                 }
                 else
                 {
-                    Articulo artBuscado = lista.Find(x => x.IdArticulo == id);
+                    Articulo artBuscado = negocio.buscarPorId(id);
                     if (artBuscado != null)
                     {
                         return Request.CreateResponse(HttpStatusCode.OK, artBuscado);
@@ -82,16 +83,15 @@ namespace TPWebApi_Equipo1A.Controllers
                 Marca marca = marcasNegocio.listar().Find(x => x.IdMarca == articulo.IdMarca);
                 Categoria categoria = categoriasNegocio.listar().Find(x => x.IdCategoria == articulo.IdCategoria);
                 // Validamos que el articulo no exista en base de datos
-                List<Articulo> articulosExistentes = articuloNegocio.listar();
-                Articulo articuloExistente = articulosExistentes.Find(x => x.CodigoArticulo == articulo.CodigoArticulo);
-                // Uso codigo articulo ya q articuloDto viene sin idarticulo no se si es correcto
+                Articulo articuloExistente = articuloNegocio.buscarPorCodigo(articulo.CodigoArticulo);
+                // ** Uso codigo articulo ya q articuloDto viene sin idarticulo no se si es correcto
 
                 if (marca == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
                 if (categoria == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
                 if (articuloExistente != null) { return Request.CreateErrorResponse(HttpStatusCode.Conflict, "409"); }
 
-                if (!string.IsNullOrEmpty(articulo.CodigoArticulo) && !string.IsNullOrEmpty(articulo.Nombre) && 
-                    !string.IsNullOrEmpty(articulo.Descripcion) && articulo.Precio != 0 && articulo.IdMarca != 0 
+                if (!string.IsNullOrEmpty(articulo.CodigoArticulo) && !string.IsNullOrEmpty(articulo.Nombre) &&
+                    !string.IsNullOrEmpty(articulo.Descripcion) && articulo.Precio != 0 && articulo.IdMarca != 0
                     && articulo.IdCategoria != 0)
                 {
                     var nuevo = new Articulo
@@ -133,8 +133,8 @@ namespace TPWebApi_Equipo1A.Controllers
                 if (string.IsNullOrWhiteSpace(articulo.CodigoArticulo) ||
                     string.IsNullOrWhiteSpace(articulo.Nombre) ||
                     articulo.Precio <= 0 ||
-                    articulo.IdMarca== 0 ||
-                    articulo.IdCategoria== 0)
+                    articulo.IdMarca == 0 ||
+                    articulo.IdCategoria == 0)
                 {
                     return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400");
                 }
@@ -212,9 +212,21 @@ namespace TPWebApi_Equipo1A.Controllers
         {
             try
             {
+                // Validamos por item en la lista de url que ninguno este vacio para no subir links vacios
+                foreach (string url in urls)
+                {
+                    if (url == "" || url == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
+                }
                 articuloNegocio negocio = new articuloNegocio();
-                negocio.agregarImagenes(id, urls); 
-                return Request.CreateResponse(HttpStatusCode.OK, "Imágenes agregadas.");
+                // Validamos existencia del articulo elegido
+                Articulo validar = negocio.buscarPorId(id);
+                if (validar == null) { return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400"); }
+                negocio.agregarImagenes(id, urls);
+
+                List<Imagen> imagenes = negocio.traerImagenesArticulo(id);
+                // Validamos que existan las imagenes en la base de datos
+                if (imagenes.Count != urls.Count) { return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500"); }
+                return Request.CreateResponse(HttpStatusCode.OK, "200");
             }
             catch (Exception ex)
             {
