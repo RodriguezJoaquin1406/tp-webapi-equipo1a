@@ -1,6 +1,7 @@
 ﻿using dominio;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -424,8 +425,13 @@ namespace negocio
         // AGREGAR IMAGENES A UN ARTICULO
         public void agregarImagenes(int idArticulo, List<string> urls)
         {
+            AccesoDatos datos = new AccesoDatos();
+
             try
             {
+                datos.Comando.Connection = new SqlConnection("server=.\\SQLEXPRESS; database=CATALOGO_P3_DB; integrated security=true");
+                datos.Comando.Connection.Open(); // Abrir conexión una sola vez
+
                 foreach (string url in urls)
                 {
                     if (!string.IsNullOrWhiteSpace(url))
@@ -434,7 +440,7 @@ namespace negocio
                         datos.Comando.Parameters.Clear();
                         datos.setearParametro("@IdArticulo", idArticulo);
                         datos.setearParametro("@ImagenUrl", url);
-                        datos.ejecutarAccion();
+                        datos.Comando.ExecuteNonQuery(); // Ejecutar directamente sin cerrar conexión porque me traia problemas que cargaba una sola imagen
                     }
                 }
             }
@@ -444,15 +450,10 @@ namespace negocio
             }
             finally
             {
-                datos.cerrarConexion();
+                datos.Comando.Connection.Close(); // Cerrar al final
             }
         }
 
-
-
-
-
-
-
     }
+
 }
