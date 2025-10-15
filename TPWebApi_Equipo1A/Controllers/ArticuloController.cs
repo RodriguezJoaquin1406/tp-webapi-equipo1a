@@ -213,7 +213,7 @@ namespace TPWebApi_Equipo1A.Controllers
             try
             {
                 articuloNegocio negocio = new articuloNegocio();
-                negocio.agregarImagenes(id, urls); // Este método lo podés implementar en tu lógica
+                negocio.agregarImagenes(id, urls); 
                 return Request.CreateResponse(HttpStatusCode.OK, "Imágenes agregadas.");
             }
             catch (Exception ex)
