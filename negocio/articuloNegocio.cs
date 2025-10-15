@@ -542,7 +542,26 @@ namespace negocio
             }
         }
 
-
+        public void eliminarImagenes(int id)
+        {
+            AccesoDatos datos = new AccesoDatos();
+            try
+            {
+                string consulta = "DELETE FROM IMAGENES WHERE IdArticulo = @Id";
+                datos.setConsulta(consulta);
+                datos.Comando.Parameters.Clear();
+                datos.setearParametro("@Id", id);
+                datos.ejecutarAccion();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                datos.cerrarConexion();
+            }
+        }
     }
 
 }

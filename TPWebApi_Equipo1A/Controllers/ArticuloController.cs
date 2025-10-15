@@ -73,6 +73,7 @@ namespace TPWebApi_Equipo1A.Controllers
         // POST: api/Articulo
         public HttpResponseMessage Post([FromBody] ArticuloDto articulo)
         {
+            if (articulo == null) { return Request.CreateResponse(HttpStatusCode.NotFound, "404"); }
             try
             {
                 var articuloNegocio = new articuloNegocio();
@@ -140,16 +141,38 @@ namespace TPWebApi_Equipo1A.Controllers
                 }
 
                 articuloNegocio negocio = new articuloNegocio();
-                Articulo nuevo = new Articulo();
-                nuevo.IdArticulo = id;
-                nuevo.CodigoArticulo = articulo.CodigoArticulo;
-                nuevo.Nombre = articulo.Nombre;
-                nuevo.Descripcion = articulo.Descripcion;
-                nuevo.Precio = articulo.Precio;
-                nuevo.marca = new Marca { IdMarca = articulo.IdMarca };
-                nuevo.categoria = new Categoria { IdCategoria = articulo.IdCategoria };
+                var marcasNegocio = new marcaNegocio();
+                var categoriasNegocio = new categoriaNegocio();
+                Articulo nuevo = negocio.buscarPorId(id);
 
-                negocio.modificar(nuevo);
+                if (nuevo == null)
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "404");
+
+                bool marcaExiste = marcasNegocio.listar().Any(x => x.IdMarca == articulo.IdMarca);
+                if (!marcaExiste)
+                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400");
+
+                bool categoriaExiste = categoriasNegocio.listar().Any(x => x.IdCategoria == articulo.IdCategoria);
+                if (!categoriaExiste)
+                    return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "400");
+
+                // si cambian codigo validar que no pise a otro
+                var otroConMismoCodigo = negocio.buscarPorCodigo(articulo.CodigoArticulo);
+                if (otroConMismoCodigo != null && otroConMismoCodigo.IdArticulo != id)
+                    return Request.CreateErrorResponse(HttpStatusCode.Conflict, "409");
+
+                var modificado = new Articulo
+                {
+                    IdArticulo = id,
+                    CodigoArticulo = articulo.CodigoArticulo,
+                    Nombre = articulo.Nombre,
+                    Descripcion = articulo.Descripcion,
+                    Precio = articulo.Precio,
+                    marca = new Marca { IdMarca = articulo.IdMarca },
+                    categoria = new Categoria { IdCategoria = articulo.IdCategoria }
+                };
+
+                negocio.modificar(modificado);
 
                 //Validar que se hayan modificado los datos
                 Articulo validar = negocio.listar().Find(x => x.IdArticulo == id);
@@ -190,14 +213,22 @@ namespace TPWebApi_Equipo1A.Controllers
                 if (art == null)
                     return Request.CreateResponse(HttpStatusCode.NotFound, "404");
 
+                // eliminar imagenes, pd primero imagenes ya que la consulta usa
+                // el id de articulo entonces si ya esta borrado no funciona
+                negocio.eliminarImagenes(id);
                 negocio.eliminar(art.CodigoArticulo);
                 // Validar que no exista mas el articulo
-                Articulo validar = negocio.listar().Find(x => x.IdArticulo == id);
+                Articulo validar = negocio.buscarPorId(id);
                 if (validar != null)
                 {
                     return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
                 }
-
+                // Validar imagenes
+                //List<Imagen> imagenes = negocio.traerImagenesArticulo(id);
+                //if(imagenes != null)
+                //{
+                //    return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "500");
+                //}
                 return Request.CreateResponse(HttpStatusCode.OK, "200");
             }
             catch (Exception ex)
